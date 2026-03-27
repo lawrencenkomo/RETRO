@@ -1,0 +1,252 @@
+* Keypad Input to BCD 7-Segment Display System
+* Complete SPICE Netlist for Proteus 8
+* Digital Systems Design - Keypad Encoder with Debouncing
+
+.title Keypad to BCD Encoder with Debouncing and 7-Segment Display
+
+* ============================================================================
+* POWER SUPPLIES & GROUND
+* ============================================================================
+VCC 1 0 DC 5V
+GND 0 0 DC 0V
+
+* ============================================================================
+* INPUT STAGE: 10-KEY COMMON-TERMINAL KEYPAD
+* ============================================================================
+* Keypad switches (momentary, normally open)
+* Common terminal connected to VCC (pin 1)
+* Individual key outputs: D_0 through D_9
+
+SW0 1 D0 SWITCH
+SW1 1 D1 SWITCH
+SW2 1 D2 SWITCH
+SW3 1 D3 SWITCH
+SW4 1 D4 SWITCH
+SW5 1 D5 SWITCH
+SW6 1 D6 SWITCH
+SW7 1 D7 SWITCH
+SW8 1 D8 SWITCH
+SW9 1 D9 SWITCH
+
+* ============================================================================
+* DEBOUNCING STAGE: RC LOW-PASS FILTERS & SCHMITT TRIGGERS
+* ============================================================================
+* Pull-down resistors (10 kΩ each) - keeps inputs LOW when switches open
+RPD0 D0 0 10k
+RPD1 D1 0 10k
+RPD2 D2 0 10k
+RPD3 D3 0 10k
+RPD4 D4 0 10k
+RPD5 D5 0 10k
+RPD6 D6 0 10k
+RPD7 D7 0 10k
+RPD8 D8 0 10k
+RPD9 D9 0 10k
+
+* RC Filter Capacitors (2.2 µF each) - τ = R*C = 10k * 2.2µ = 22ms
+CRC0 D0 0 2.2u
+CRC1 D1 0 2.2u
+CRC2 D2 0 2.2u
+CRC3 D3 0 2.2u
+CRC4 D4 0 2.2u
+CRC5 D5 0 2.2u
+CRC6 D6 0 2.2u
+CRC7 D7 0 2.2u
+CRC8 D8 0 2.2u
+CRC9 D9 0 2.2u
+
+* Schmitt Trigger Inverters (74HC14)
+* IC1: 74HC14 (pins 1,2=gate1, 3,4=gate2, 5,6=gate3, 9,8=gate4, 11,10=gate5, 13,12=gate6)
+* IC2: 74HC14 (second chip for remaining gates)
+
+X1_U1 1 D0 D0_CLEAN 74HC14_GATE
+X1_U2 1 D1 D1_CLEAN 74HC14_GATE
+X1_U3 1 D2 D2_CLEAN 74HC14_GATE
+X1_U4 1 D3 D3_CLEAN 74HC14_GATE
+X1_U5 1 D4 D4_CLEAN 74HC14_GATE
+
+X2_U1 1 D5 D5_CLEAN 74HC14_GATE
+X2_U2 1 D6 D6_CLEAN 74HC14_GATE
+X2_U3 1 D7 D7_CLEAN 74HC14_GATE
+X2_U4 1 D8 D8_CLEAN 74HC14_GATE
+X2_U5 1 D9 D9_CLEAN 74HC14_GATE
+
+* ============================================================================
+* COMBINATIONAL ENCODER STAGE
+* ============================================================================
+* Logic Equations (using OR gates - 7432 IC):
+* Q0 = D1 + D3 + D5 + D7 + D9
+* Q1 = D2 + D3 + D6 + D7
+* Q2 = D4 + D5 + D6 + D7
+* Q3 = D8 + D9
+
+* Q0: 5-input OR (cascade two 2-input gates)
+X_OR1_A 1 D1_CLEAN D3_CLEAN Q0_TEMP1 7432_2IN_OR
+X_OR1_B 1 D5_CLEAN D7_CLEAN Q0_TEMP2 7432_2IN_OR
+X_OR1_C 1 Q0_TEMP1 Q0_TEMP2 Q0_TEMP3 7432_2IN_OR
+X_OR1_D 1 Q0_TEMP3 D9_CLEAN Q0 7432_2IN_OR
+
+* Q1: 4-input OR (cascade two 2-input gates)
+X_OR2_A 1 D2_CLEAN D3_CLEAN Q1_TEMP1 7432_2IN_OR
+X_OR2_B 1 D6_CLEAN D7_CLEAN Q1_TEMP2 7432_2IN_OR
+X_OR2_C 1 Q1_TEMP1 Q1_TEMP2 Q1 7432_2IN_OR
+
+* Q2: 4-input OR (cascade two 2-input gates)
+X_OR3_A 1 D4_CLEAN D5_CLEAN Q2_TEMP1 7432_2IN_OR
+X_OR3_B 1 D6_CLEAN D7_CLEAN Q2_TEMP2 7432_2IN_OR
+X_OR3_C 1 Q2_TEMP1 Q2_TEMP2 Q2 7432_2IN_OR
+
+* Q3: 2-input OR
+X_OR4 1 D8_CLEAN D9_CLEAN Q3 7432_2IN_OR
+
+* ============================================================================
+* BCD-TO-7-SEGMENT DECODER STAGE
+* ============================================================================
+* CD4511 BCD-to-7-Segment Decoder
+* Inputs: Q0(A), Q1(B), Q2(C), Q3(D)
+* Outputs: a, b, c, d, e, f, g (7-segment lines)
+
+X_DECODER 1 0 Q0 Q1 Q2 Q3 SEG_A SEG_B SEG_C SEG_D SEG_E SEG_F SEG_G CD4511_DECODER
+
+* ============================================================================
+* CURRENT-LIMITING RESISTOR NETWORK
+* ============================================================================
+* 220 Ω resistors in series with each segment output
+
+R_A SEG_A DISP_A 220
+R_B SEG_B DISP_B 220
+R_C SEG_C DISP_C 220
+R_D SEG_D DISP_D 220
+R_E SEG_E DISP_E 220
+R_F SEG_F DISP_F 220
+R_G SEG_G DISP_G 220
+
+* ============================================================================
+* 7-SEGMENT DISPLAY (COMMON-CATHODE)
+* ============================================================================
+* LED segments with 20mA typical forward current, ~2V forward voltage
+
+LED_A DISP_A 0 DLED {20m}
+LED_B DISP_B 0 DLED {20m}
+LED_C DISP_C 0 DLED {20m}
+LED_D DISP_D 0 DLED {20m}
+LED_E DISP_E 0 DLED {20m}
+LED_F DISP_F 0 DLED {20m}
+LED_G DISP_G 0 DLED {20m}
+
+* ============================================================================
+* SUBCIRCUIT DEFINITIONS
+* ============================================================================
+
+* 74HC14 Schmitt Trigger Inverter Gate (single gate)
+.subckt 74HC14_GATE VCC IN OUT
+* Simple inverter model with hysteresis
+* Proteus will substitute actual 74HC14 model when available
+BINV IN OUT VALUE = {IF(V(IN) > 2.5, 0, 5)}
+.ends 74HC14_GATE
+
+* 7432 2-Input OR Gate
+.subckt 7432_2IN_OR VCC A B OUT
+* OR gate: OUT = A + B (logic OR)
+BOR A B OUT VALUE = {IF(OR(V(A) > 2.5, V(B) > 2.5), 5, 0)}
+.ends 7432_2IN_OR
+
+* CD4511 BCD-to-7-Segment Decoder
+.subckt CD4511_DECODER VCC GND A B C D OUT_A OUT_B OUT_C OUT_D OUT_E OUT_F OUT_G
+* Truth table implementation for BCD to 7-segment (common-cathode)
+* Segments: a=top, b=top-right, c=bottom-right, d=bottom, e=bottom-left, f=top-left, g=middle
+*
+* BCD | a b c d e f g | Display
+* 0   | 1 1 1 1 1 1 0 | 0
+* 1   | 0 1 1 0 0 0 0 | 1
+* 2   | 1 1 0 1 1 0 1 | 2
+* 3   | 1 1 1 1 0 0 1 | 3
+* 4   | 0 1 1 0 0 1 1 | 4
+* 5   | 1 0 1 1 0 1 1 | 5
+* 6   | 1 0 1 1 1 1 1 | 6
+* 7   | 1 1 1 0 0 0 0 | 7
+* 8   | 1 1 1 1 1 1 1 | 8
+* 9   | 1 1 1 1 0 1 1 | 9
+
+* Simplified logic equations for common-cathode display:
+* OUT_A (segment a): = NOT(A*NOT(B)*NOT(C)*NOT(D) + NOT(A)*B*NOT(C)*D)
+* OUT_B (segment b): = NOT(NOT(A)*NOT(B)*NOT(C)*D + NOT(A)*B*NOT(C)*NOT(D))
+* OUT_C (segment c): = NOT(A*NOT(B)*NOT(C)*D + NOT(A)*B*C*NOT(D))
+* ... etc for d, e, f, g
+
+* Using behavioral voltage sources for each output
+BA OUT_A 0 V = {IF(OR(AND(V(A)<2.5, V(B)<2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)<2.5, V(B)>2.5, V(C)<2.5, V(D)>2.5),
++                      AND(V(A)>2.5, V(B)<2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)<2.5, V(C)>2.5, V(D)>2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)>2.5)), 5, 0)}
+
+BB OUT_B 0 V = {IF(OR(AND(V(A)<2.5, V(B)<2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)<2.5, V(B)<2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)<2.5, V(B)<2.5, V(C)>2.5, V(D)>2.5),
++                      AND(V(A)<2.5, V(B)>2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)<2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)>2.5)), 5, 0)}
+
+BC OUT_C 0 V = {IF(OR(AND(V(A)<2.5, V(B)<2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)<2.5, V(B)>2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)<2.5, V(B)>2.5, V(C)<2.5, V(D)>2.5),
++                      AND(V(A)<2.5, V(B)>2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)<2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)>2.5)), 5, 0)}
+
+BD OUT_D 0 V = {IF(OR(AND(V(A)<2.5, V(B)<2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)<2.5, V(B)<2.5, V(C)>2.5, V(D)>2.5),
++                      AND(V(A)<2.5, V(B)>2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)<2.5, V(C)<2.5, V(D)>2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)>2.5)), 5, 0)}
+
+BE OUT_E 0 V = {IF(OR(AND(V(A)<2.5, V(B)<2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)<2.5, V(B)<2.5, V(C)>2.5, V(D)>2.5),
++                      AND(V(A)<2.5, V(B)>2.5, V(C)>2.5, V(D)>2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)>2.5)), 5, 0)}
+
+BF OUT_F 0 V = {IF(OR(AND(V(A)<2.5, V(B)<2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)<2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)<2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)<2.5, V(C)>2.5, V(D)>2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)>2.5)), 5, 0)}
+
+BG OUT_G 0 V = {IF(OR(AND(V(A)<2.5, V(B)>2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)<2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)<2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)<2.5, V(C)>2.5, V(D)>2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)<2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)<2.5),
++                      AND(V(A)>2.5, V(B)>2.5, V(C)>2.5, V(D)>2.5)), 5, 0)}
+
+.ends CD4511_DECODER
+
+* LED model for 7-segment display segments
+.model DLED D (IS=1e-14 RS=10 N=1.8 BV=100 IBV=1e-3)
+
+* Momentary switch model
+.model SWITCH SW (VT=0.5 VH=0.1)
+
+* ============================================================================
+* ANALYSIS COMMANDS
+* ============================================================================
+
+* Transient Analysis: 100ms simulation time
+.tran 0 100m 0 1m
+
+* Control Commands for Interactive Simulation
+.control
+run
+.endc
+
+.end
