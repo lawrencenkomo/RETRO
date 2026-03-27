@@ -1,0 +1,11 @@
+*Updated SPICE netlist for Proteus 8*
+
+*Subcircuit Definitions:*
+- Improved definitions for accuracy and performance.
+
+*Behavioral Models:*
+- Proper behavioral models implemented for better simulation results.
+
+*Netlist Components:*
+- Added new components for enhanced functionality.
+- Optimized existing components to ensure compatibility with Proteus 8.
